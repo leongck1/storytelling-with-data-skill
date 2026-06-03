@@ -1,6 +1,6 @@
 # Storytelling with Data — Claude Skill
 
-A data visualisation skill for [Claude](https://claude.ai) based on [**Storytelling with Data**](https://www.storytellingwithdata.com/books) by **Cole Nussbaumer Knaflic**.
+A data visualisation skill for [Claude](https://claude.ai) based on [**Storytelling with Data**](https://www.amazon.com/Storytelling-Data-Visualization-Business-Professionals/dp/1119002257) by **Cole Nussbaumer Knaflic**.
 
 ## About the Book
 
@@ -79,4 +79,4 @@ This skill is an unofficial, personal project and is not affiliated with, endors
 
 ## License
 
-MIT — see [LICENSE.txt](./LICENSE.txt)
+MIT — see [LICENSE](LICENSE)
