@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chart Type Selector</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f8f7f4; color: #1a1a18; padding: 24px; }
+  h1 { font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+  .intro { font-size: 13px; color: #6b6a63; margin-bottom: 24px; line-height: 1.6; }
+
+  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 20px; }
+
+  .sidebar { display: flex; flex-direction: column; gap: 6px; }
+  .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: #aaa; padding: 8px 0 4px; font-weight: 500; }
+  .type-btn {
+    padding: 9px 12px; border: 0.5px solid #ddd; border-radius: 7px;
+    background: #fff; cursor: pointer; text-align: left; font-size: 13px;
+    transition: all .15s; color: #333; line-height: 1.4;
+  }
+  .type-btn:hover { background: #f4f3ee; border-color: #bbb; }
+  .type-btn.active { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+  .type-btn .use-when { font-size: 11px; opacity: .7; display: block; margin-top: 2px; }
+
+  .chart-panel { background: #fff; border: 0.5px solid #ddd; border-radius: 10px; padding: 20px; }
+  .chart-header { margin-bottom: 16px; }
+  .chart-header h2 { font-size: 15px; font-weight: 500; }
+  .chart-header .use { font-size: 12px; color: #888; margin-top: 4px; line-height: 1.5; }
+  .chart-header .avoid { font-size: 12px; color: #c94f4f; margin-top: 4px; }
+  .canvas-wrap { position: relative; height: 280px; }
+  .avoid-badge {
+    display: inline-block; background: #fff0f0; color: #c94f4f; border: 0.5px solid #f7c1c1;
+    border-radius: 4px; font-size: 11px; padding: 2px 8px; margin-right: 6px; margin-top: 4px;
+  }
+  .good-badge {
+    display: inline-block; background: #f0f8f4; color: #2e7d52; border: 0.5px solid #b0d8bc;
+    border-radius: 4px; font-size: 11px; padding: 2px 8px; margin-right: 6px; margin-top: 4px;
+  }
+  .legend-custom { display: flex; gap: 14px; margin-bottom: 10px; font-size: 12px; color: #666; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<h1>Chart Type Selector</h1>
+<p class="intro">Pick what you want to show. The right chart makes the message obvious; the wrong one hides it.</p>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="section-label">By purpose</div>
+    <button class="type-btn active" onclick="show('line')" id="btn-line">
+      Line graph
+      <span class="use-when">Trend over time</span>
+    </button>
+    <button class="type-btn" onclick="show('bar')" id="btn-bar">
+      Vertical bar
+      <span class="use-when">Compare categories</span>
+    </button>
+    <button class="type-btn" onclick="show('hbar')" id="btn-hbar">
+      Horizontal bar
+      <span class="use-when">Long category names</span>
+    </button>
+    <button class="type-btn" onclick="show('stacked')" id="btn-stacked">
+      Stacked bar
+      <span class="use-when">Totals + sub-parts</span>
+    </button>
+    <button class="type-btn" onclick="show('slope')" id="btn-slope">
+      Slope graph
+      <span class="use-when">Two-point change</span>
+    </button>
+    <button class="type-btn" onclick="show('scatter')" id="btn-scatter">
+      Scatter plot
+      <span class="use-when">Relationship between two things</span>
+    </button>
+    <div class="section-label">Avoid these</div>
+    <button class="type-btn" onclick="show('pie')" id="btn-pie">
+      Pie chart ✕
+      <span class="use-when">Hard to compare segments</span>
+    </button>
+    <button class="type-btn" onclick="show('3d')" id="btn-3d">
+      3D chart ✕
+      <span class="use-when">Distorts perception</span>
+    </button>
+  </div>
+
+  <div class="chart-panel">
+    <div class="chart-header" id="chart-header"></div>
+    <div class="legend-custom" id="legend-custom"></div>
+    <div class="canvas-wrap">
+      <canvas id="myChart" role="img" aria-label="Chart demonstrating the selected chart type">Chart visualization.</canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+let chart = null;
+
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const salesA = [42,58,51,67,73,88,82,91,79,95,104,112];
+const salesB = [38,44,49,55,61,59,67,72,80,78,85,92];
+
+const CONFIG = {
+  line: {
+    title: 'Revenue over time',
+    use: '✓ Use when: showing continuous data over time — days, months, quarters, years.',
+    avoid: null,
+    good: ['Shows trend clearly','Nonzero baseline OK if not misleading'],
+    bad: [],
+    build(ctx) {
+      return new Chart(ctx, {
+        type: 'line',
+        data: { labels: months, datasets: [
+          { label: 'Product A', data: salesA, borderColor: '#5b93cc', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, tension: 0.3 },
+          { label: 'Product B', data: salesB, borderColor: '#888780', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, tension: 0.3, borderDash: [5,3] }
+        ]},
+        options: opts()
+      });
+    },
+    legend: [{color:'#5b93cc', label:'Product A'},{color:'#888780', label:'Product B'}]
+  },
+  bar: {
+    title: 'Sales by region',
+    use: '✓ Use when: comparing values across categories. Zero baseline is mandatory.',
+    avoid: '✗ Do not start y-axis above zero — bars will be visually misleading.',
+    good: ['Zero baseline mandatory','Order categories logically'],
+    bad: ['Never start y-axis above 0'],
+    build(ctx) {
+      const labels = ['North Asia','Europe','Americas','Southeast','Middle East'];
+      const vals = [87, 92, 64, 71, 78];
+      const colors = vals.map((v,i) => i===1 ? '#E8593C' : '#b4b2a9');
+      return new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Revenue ($M)', data: vals, backgroundColor: colors, borderRadius: 3 }]},
+        options: {
+          ...opts(),
+          scales: { x: { grid:{display:false}, border:{display:false} }, y: { beginAtZero: true, grid:{color:'#eee'}, border:{display:false}, ticks:{callback:v=>v+'M'} } }
+        }
+      });
+    },
+    legend: [{color:'#E8593C', label:'Highlighted region'},{color:'#b4b2a9', label:'Other regions'}]
+  },
+  hbar: {
+    title: 'Customer satisfaction by feature',
+    use: '✓ Use when: category names are long — text reads left-to-right naturally.',
+    avoid: null,
+    good: ['Order by value (largest to smallest) unless natural ordering exists','Audience sees the label before the bar'],
+    bad: [],
+    build(ctx) {
+      const labels = ['Easy to use','Customer support quality','Value for money','Setup process','Documentation clarity'];
+      const vals = [88, 72, 65, 58, 51];
+      const colors = vals.map((v,i) => i===0 ? '#5b93cc' : '#b4b2a9');
+      return new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Satisfaction %', data: vals, backgroundColor: colors, borderRadius: 3 }]},
+        options: {
+          ...opts(),
+          indexAxis: 'y',
+          scales: {
+            x: { beginAtZero: true, max: 100, grid:{color:'#eee'}, border:{display:false}, ticks:{callback:v=>v+'%'} },
+            y: { grid:{display:false}, border:{display:false} }
+          }
+        }
+      });
+    },
+    legend: []
+  },
+  stacked: {
+    title: 'Revenue breakdown by product line',
+    use: '✓ Use when: comparing totals AND sub-components. Easy to compare top/bottom segments; middle is harder.',
+    avoid: '! Middle segments are hard to compare across bars — consider alternatives if that comparison matters.',
+    good: ['Totals clear at a glance','Top and bottom baselines enable comparison'],
+    bad: ['Middle segments have no baseline — hard to judge'],
+    build(ctx) {
+      const quarters = ['Q1','Q2','Q3','Q4'];
+      return new Chart(ctx, {
+        type: 'bar',
+        data: { labels: quarters, datasets: [
+          { label: 'Hardware', data: [30,35,32,40], backgroundColor: '#5b93cc', stack: 'a', borderRadius: 0 },
+          { label: 'Software', data: [25,28,30,35], backgroundColor: '#4caf82', stack: 'a', borderRadius: 0 },
+          { label: 'Services', data: [15,18,20,22], backgroundColor: '#f0a23a', stack: 'a', borderRadius: 3 }
+        ]},
+        options: { ...opts(), scales: { x:{grid:{display:false},border:{display:false}}, y:{beginAtZero:true,grid:{color:'#eee'},border:{display:false}} } }
+      });
+    },
+    legend: [{color:'#5b93cc',label:'Hardware'},{color:'#4caf82',label:'Software'},{color:'#f0a23a',label:'Services'}]
+  },
+  slope: {
+    title: 'Customer satisfaction: Before vs After',
+    use: '✓ Use when: comparing values at two points in time across multiple categories.',
+    avoid: 'Use colour strategically: highlight which lines show the most important changes.',
+    good: ['Shows direction of change clearly','Steeper slope = bigger change'],
+    bad: ['Overlapping lines become hard to read — consider de-emphasising some'],
+    build(ctx) {
+      const labels = ['Before','After'];
+      const datasets = [
+        {label:'Support',     data:[55,78], borderColor:'#E8593C', borderWidth:3, pointRadius:5, tension:0},
+        {label:'Onboarding',  data:[62,71], borderColor:'#b4b2a9', borderWidth:1.5, pointRadius:4, tension:0, borderDash:[4,3]},
+        {label:'Performance', data:[70,68], borderColor:'#b4b2a9', borderWidth:1.5, pointRadius:4, tension:0, borderDash:[4,3]},
+        {label:'Pricing',     data:[48,52], borderColor:'#b4b2a9', borderWidth:1.5, pointRadius:4, tension:0, borderDash:[4,3]},
+      ];
+      return new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: { ...opts(), scales: { x:{grid:{display:false},border:{display:false}}, y:{min:30,max:100,grid:{color:'#eee'},border:{display:false}} } }
+      });
+    },
+    legend: [{color:'#E8593C',label:'Support (highlighted)'},{color:'#b4b2a9',label:'Other categories'}]
+  },
+  scatter: {
+    title: 'Marketing spend vs. Revenue',
+    use: '✓ Use when: showing the relationship between two numerical variables.',
+    avoid: null,
+    good: ['Shows correlation, clusters, outliers','Both axes must be numerical'],
+    bad: [],
+    build(ctx) {
+      const pts = [{x:12,y:38},{x:19,y:52},{x:25,y:61},{x:30,y:70},{x:35,y:80},{x:42,y:88},{x:50,y:95},{x:55,y:102},{x:18,y:45},{x:28,y:65},{x:45,y:91},{x:22,y:50},{x:38,y:84},{x:10,y:30},{x:48,y:98}];
+      return new Chart(ctx, {
+        type: 'scatter',
+        data: { datasets: [{ label: 'Business unit', data: pts, backgroundColor: '#5b93cccc', pointRadius: 6, pointHoverRadius: 8 }]},
+        options: {
+          ...opts(),
+          scales: {
+            x: { title:{display:true,text:'Marketing spend ($K)',font:{size:11},color:'#888'}, grid:{color:'#eee'}, border:{display:false} },
+            y: { title:{display:true,text:'Revenue ($M)',font:{size:11},color:'#888'}, grid:{color:'#eee'}, border:{display:false} }
+          }
+        }
+      });
+    },
+    legend: []
+  },
+  pie: {
+    title: 'Pie chart — hard to compare segments',
+    use: '✗ Problem: Comparing arc lengths and areas is harder than comparing bar lengths.',
+    avoid: 'Audiences must mentally calculate differences. "OK" dropped from 40% → 14% but this is not obvious.',
+    good: [],
+    bad: ['Segment comparison requires mental effort','Two pies side by side makes change invisible'],
+    build(ctx) {
+      return new Chart(ctx, {
+        type: 'pie',
+        data: { labels: ['Excited','Kind of interested','OK','Not great','Bored'],
+          datasets: [{data:[25,11,40,5,19], backgroundColor:['#5b93cc','#4caf82','#f0a23a','#E8593C','#888780']}]},
+        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true,position:'right'}} }
+      });
+    },
+    legend: []
+  },
+  '3d': {
+    title: '3D charts — never use these',
+    use: '✗ 3D adds visual distortion without adding data. Depth perspective changes perceived bar heights.',
+    avoid: 'The back bars appear shorter than the front bars even if the values are equal.',
+    good: [],
+    bad: ['Never use 3D','Depth perspective misleads','No extra information conveyed'],
+    build(ctx) {
+      const labels = ['Q1','Q2','Q3','Q4'];
+      return new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [
+          { label: '2023', data: [65,72,68,80], backgroundColor: '#5b93cccc' },
+          { label: '2022', data: [58,65,70,75], backgroundColor: '#888780cc' }
+        ]},
+        options: {
+          ...opts(),
+          plugins: {
+            ...opts().plugins,
+            annotation: {}
+          },
+          scales: { x:{grid:{display:false}}, y:{beginAtZero:true, grid:{color:'#eee'}} }
+        }
+      });
+    },
+    legend: []
+  }
+};
+
+function opts() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+    scales: {}
+  };
+}
+
+function show(type) {
+  if (chart) { chart.destroy(); chart = null; }
+
+  // Buttons
+  Object.keys(CONFIG).forEach(k => {
+    document.getElementById('btn-'+k)?.classList.toggle('active', k===type);
+  });
+
+  const c = CONFIG[type];
+
+  // Header
+  const header = document.getElementById('chart-header');
+  let html = `<h2>${c.title}</h2><div class="use">${c.use}</div>`;
+  if (c.avoid) html += `<div class="avoid">${c.avoid}</div>`;
+  if (c.good.length) html += '<div style="margin-top:8px">' + c.good.map(g=>`<span class="good-badge">${g}</span>`).join('') + '</div>';
+  if (c.bad.length)  html += '<div style="margin-top:4px">' + c.bad.map(b=>`<span class="avoid-badge">${b}</span>`).join('') + '</div>';
+  header.innerHTML = html;
+
+  // Legend
+  const legendEl = document.getElementById('legend-custom');
+  if (c.legend && c.legend.length) {
+    legendEl.innerHTML = c.legend.map(l =>
+      `<span class="legend-item"><span class="legend-dot" style="background:${l.color}"></span>${l.label}</span>`
+    ).join('');
+  } else {
+    legendEl.innerHTML = '';
+  }
+
+  const ctx = document.getElementById('myChart').getContext('2d');
+  chart = c.build(ctx);
+}
+
+show('line');
+</script>
+</body>
+</html>

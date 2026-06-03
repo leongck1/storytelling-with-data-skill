@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Declutter Step-by-Step</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f8f7f4; color: #1a1a18; padding: 24px; }
+  h1 { font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #6b6a63; margin-bottom: 24px; }
+
+  .stepper { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+  .step-btn {
+    padding: 6px 14px; font-size: 12px; border: 0.5px solid #ccc;
+    border-radius: 6px; background: #fff; cursor: pointer; transition: all .15s;
+    color: #6b6a63;
+  }
+  .step-btn:hover { background: #f0efe9; border-color: #aaa; }
+  .step-btn.active { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+
+  .main { display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
+  .chart-wrap { background: #fff; border: 0.5px solid #ddd; border-radius: 10px; padding: 20px; }
+  .chart-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .chart-subtitle { font-size: 12px; color: #888; margin-bottom: 16px; min-height: 16px; }
+
+  .panel { background: #fff; border: 0.5px solid #ddd; border-radius: 10px; padding: 20px; }
+  .panel h3 { font-size: 13px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+  .change-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0; border-bottom: 0.5px solid #f0efe9; font-size: 13px; line-height: 1.5;
+  }
+  .change-item:last-child { border-bottom: none; }
+  .change-num {
+    width: 20px; height: 20px; border-radius: 50%; background: #1a1a18; color: #fff;
+    font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .change-num.pending { background: #e8e7e0; color: #aaa; }
+  .change-text strong { display: block; font-weight: 500; }
+  .change-text span { color: #888; font-size: 12px; }
+
+  .nav { display: flex; gap: 10px; margin-top: 24px; justify-content: space-between; align-items: center; }
+  .nav button {
+    padding: 8px 18px; border: 0.5px solid #ccc; border-radius: 6px;
+    background: #fff; cursor: pointer; font-size: 13px; transition: all .15s;
+  }
+  .nav button:hover { background: #f0efe9; }
+  .nav button.primary { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+  .nav button.primary:hover { background: #333; }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .progress-text { font-size: 12px; color: #888; }
+
+  .canvas-container { position: relative; height: 280px; }
+  .legend-custom { display: flex; gap: 16px; margin-bottom: 10px; font-size: 12px; color: #666; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<h1>Declutter Step-by-Step: IT Ticket Trend</h1>
+<p class="subtitle">Watch a cluttered chart transform into a clear story — one change at a time.</p>
+
+<div class="stepper" id="stepper"></div>
+
+<div class="main">
+  <div class="chart-wrap">
+    <div class="chart-title" id="chart-title">Ticket Trend</div>
+    <div class="chart-subtitle" id="chart-subtitle"></div>
+    <div id="legend-custom" class="legend-custom"></div>
+    <div class="canvas-container">
+      <canvas id="myChart" role="img" aria-label="IT ticket volume received vs processed over 12 months">Ticket Volume Received and Processed monthly data.</canvas>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Changes applied</h3>
+    <div id="changes-list"></div>
+    <div class="nav">
+      <button id="btn-prev" onclick="navigate(-1)">← Back</button>
+      <span class="progress-text" id="progress-text"></span>
+      <button id="btn-next" class="primary" onclick="navigate(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const received  = [160,184,241,149,180,161,123,202,156,139,149,177];
+const processed = [160,184,237,148,181,132,123,156,126,104,124,140];
+
+const STEPS = [
+  {
+    title: 'Ticket Trend',
+    subtitle: '',
+    type: 'bar',
+    showBorder: true,
+    showGridlines: true,
+    showMarkers: true,
+    trailingZeros: true,
+    diagonalLabels: true,
+    showLegend: true,
+    colorVar: false,
+    directLabels: false,
+    actionTitle: false,
+    changes: [],
+    description: 'The original chart: grouped bars, heavy styling, no story.'
+  },
+  {
+    title: 'Ticket Trend',
+    subtitle: 'Step 1: Remove chart border',
+    type: 'bar',
+    showBorder: false,
+    showGridlines: true,
+    showMarkers: true,
+    trailingZeros: true,
+    diagonalLabels: true,
+    showLegend: true,
+    colorVar: false,
+    directLabels: false,
+    actionTitle: false,
+    changes: ['border'],
+    description: 'Gestalt closure: the eye frames the chart area without an explicit border.'
+  },
+  {
+    title: 'Ticket Trend',
+    subtitle: 'Step 2: Remove gridlines',
+    type: 'bar',
+    showBorder: false,
+    showGridlines: false,
+    showMarkers: true,
+    trailingZeros: true,
+    diagonalLabels: true,
+    showLegend: true,
+    colorVar: false,
+    directLabels: false,
+    actionTitle: false,
+    changes: ['border','gridlines'],
+    description: 'Grid lines were adding noise. The data still reads clearly without them.'
+  },
+  {
+    title: 'Ticket Trend',
+    subtitle: 'Step 3: Remove data markers',
+    type: 'line',
+    showBorder: false,
+    showGridlines: false,
+    showMarkers: false,
+    trailingZeros: true,
+    diagonalLabels: true,
+    showLegend: true,
+    colorVar: false,
+    directLabels: false,
+    actionTitle: false,
+    changes: ['border','gridlines','markers','linegraph'],
+    description: 'Switched to a line graph to show trend. Removed point markers — the lines carry the trend.'
+  },
+  {
+    title: 'Ticket Trend',
+    subtitle: 'Step 4: Clean axis labels',
+    type: 'line',
+    showBorder: false,
+    showGridlines: false,
+    showMarkers: false,
+    trailingZeros: false,
+    diagonalLabels: false,
+    showLegend: true,
+    colorVar: false,
+    directLabels: false,
+    actionTitle: false,
+    changes: ['border','gridlines','markers','linegraph','axislabels'],
+    description: 'Removed trailing zeros (150 not 150.00). Abbreviated months (Jan not January) — no diagonal needed.'
+  },
+  {
+    title: 'Ticket Trend',
+    subtitle: 'Step 5: Label lines directly',
+    type: 'line',
+    showBorder: false,
+    showGridlines: false,
+    showMarkers: false,
+    trailingZeros: false,
+    diagonalLabels: false,
+    showLegend: false,
+    colorVar: false,
+    directLabels: true,
+    actionTitle: false,
+    changes: ['border','gridlines','markers','linegraph','axislabels','directlabels'],
+    description: 'Removed the legend. Labels sit at the end of each line — Gestalt proximity. No back-and-forth eye movement.'
+  },
+  {
+    title: 'Please approve the hire of 2 FTEs',
+    subtitle: 'to backfill those who quit in the past year',
+    type: 'line',
+    showBorder: false,
+    showGridlines: false,
+    showMarkers: false,
+    trailingZeros: false,
+    diagonalLabels: false,
+    showLegend: false,
+    colorVar: true,
+    directLabels: true,
+    actionTitle: true,
+    changes: ['border','gridlines','markers','linegraph','axislabels','directlabels','actiontitle'],
+    description: 'The "so what" is now the title itself. Received line highlighted (orange). The chart tells the story.'
+  }
+];
+
+const changesMeta = {
+  border:       { label: 'Remove chart border',        reason: 'Gestalt closure handles framing' },
+  gridlines:    { label: 'Remove gridlines',           reason: 'Data reads clearly without them' },
+  markers:      { label: 'Remove data markers',        reason: 'Only keep when serving a purpose' },
+  linegraph:    { label: 'Switch to line graph',       reason: 'Lines show trend better than bars' },
+  axislabels:   { label: 'Clean axis labels',          reason: 'No trailing zeros, no diagonal text' },
+  directlabels: { label: 'Label lines directly',       reason: 'Gestalt proximity; removes legend' },
+  actiontitle:  { label: 'Use an action title',        reason: 'Title = the so-what, not just a label' },
+};
+
+let currentStep = 0;
+let chart = null;
+
+function buildChart(step) {
+  if (chart) { chart.destroy(); chart = null; }
+
+  const s = STEPS[step];
+  document.getElementById('chart-title').textContent = s.title;
+  document.getElementById('chart-subtitle').textContent = s.subtitle;
+
+  const recColor  = s.colorVar ? '#E8593C' : (s.type === 'bar' ? '#5b93cc' : '#5b93cc');
+  const procColor = s.colorVar ? '#888780' : (s.type === 'bar' ? '#c94f4f' : '#c94f4f');
+
+  // Custom legend
+  const legendEl = document.getElementById('legend-custom');
+  if (s.showLegend) {
+    legendEl.innerHTML = `
+      <span class="legend-item"><span class="legend-dot" style="background:${recColor}"></span>Ticket Volume Received</span>
+      <span class="legend-item"><span class="legend-dot" style="background:${procColor}"></span>Ticket Volume Processed</span>`;
+  } else {
+    legendEl.innerHTML = '';
+  }
+
+  const ctx = document.getElementById('myChart').getContext('2d');
+  const xLabels = s.diagonalLabels
+    ? ['January','February','March','April','May','June','July','August','September','October','November','December']
+    : months;
+
+  chart = new Chart(ctx, {
+    type: s.type,
+    data: {
+      labels: xLabels,
+      datasets: [
+        {
+          label: 'Ticket Volume Received',
+          data: received,
+          backgroundColor: recColor + (s.type==='bar' ? 'cc' : ''),
+          borderColor: recColor,
+          borderWidth: s.type === 'line' ? (s.colorVar ? 2.5 : 2) : 0,
+          pointRadius: s.showMarkers ? 5 : 0,
+          pointHoverRadius: s.showMarkers ? 6 : 0,
+          tension: 0.3,
+          fill: false,
+          borderDash: [],
+        },
+        {
+          label: 'Ticket Volume Processed',
+          data: processed,
+          backgroundColor: procColor + (s.type==='bar' ? 'cc' : ''),
+          borderColor: procColor,
+          borderWidth: s.type === 'line' ? 2 : 0,
+          pointRadius: s.showMarkers ? 5 : 0,
+          pointHoverRadius: s.showMarkers ? 6 : 0,
+          tension: 0.3,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: {
+          grid: { display: s.showGridlines, color: '#e8e8e8' },
+          border: { display: s.showBorder, color: '#aaa' },
+          ticks: {
+            maxRotation: s.diagonalLabels ? 45 : 0,
+            minRotation: s.diagonalLabels ? 45 : 0,
+            font: { size: 11 }
+          }
+        },
+        y: {
+          min: 0,
+          max: 320,
+          grid: { display: s.showGridlines, color: '#e8e8e8' },
+          border: { display: s.showBorder, color: '#aaa' },
+          ticks: {
+            callback: v => s.trailingZeros ? v.toFixed(2) : v,
+            font: { size: 11 }
+          }
+        }
+      }
+    },
+    plugins: s.directLabels ? [{
+      id: 'directLabels',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((ds, i) => {
+          const meta = chart.getDatasetMeta(i);
+          const last = meta.data[meta.data.length - 1];
+          if (!last) return;
+          ctx.save();
+          ctx.font = 'bold 11px system-ui, sans-serif';
+          ctx.fillStyle = ds.borderColor;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(i === 0 ? 'Received' : 'Processed', last.x + 6, last.y);
+          ctx.restore();
+        });
+      }
+    }] : []
+  });
+}
+
+function buildChanges(step) {
+  const applied = STEPS[step].changes;
+  const all = Object.keys(changesMeta);
+  const html = all.map((k, i) => {
+    const done = applied.includes(k);
+    return `<div class="change-item">
+      <span class="change-num ${done ? '' : 'pending'}">${i+1}</span>
+      <div class="change-text">
+        <strong>${changesMeta[k].label}</strong>
+        <span>${changesMeta[k].reason}</span>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('changes-list').innerHTML = html;
+}
+
+function buildStepper() {
+  const el = document.getElementById('stepper');
+  el.innerHTML = STEPS.map((s, i) =>
+    `<button class="step-btn ${i===currentStep?'active':''}" onclick="goTo(${i})">${i===0?'Original':`Step ${i}`}</button>`
+  ).join('');
+}
+
+function updateNav() {
+  document.getElementById('btn-prev').disabled = currentStep === 0;
+  document.getElementById('btn-next').disabled = currentStep === STEPS.length - 1;
+  document.getElementById('btn-next').textContent = currentStep === STEPS.length - 1 ? 'Done ✓' : 'Next →';
+  document.getElementById('progress-text').textContent = `${currentStep + 1} / ${STEPS.length}`;
+}
+
+function goTo(i) {
+  currentStep = i;
+  buildChart(currentStep);
+  buildChanges(currentStep);
+  buildStepper();
+  updateNav();
+}
+
+function navigate(dir) {
+  const next = currentStep + dir;
+  if (next >= 0 && next < STEPS.length) goTo(next);
+}
+
+goTo(0);
+</script>
+</body>
+</html>
